@@ -300,11 +300,12 @@ func traverseState(ctx *cli.Context) error {
 	defer stack.Close()
 
 	chaindb := utils.MakeChainDatabase(ctx, stack, true)
-	headBlock := rawdb.ReadHeadBlock(chaindb)
+	headBlock := rawdb.ReadHeadBlock(chaindb) //读取头部区块 ，读取kv中的「LastHeader」
 	if headBlock == nil {
 		log.Error("Failed to load head block")
 		return errors.New("no head block")
 	}
+	//判断参数数量，只接受一个参数
 	if ctx.NArg() > 1 {
 		log.Error("Too many arguments given")
 		return errors.New("too many arguments")
@@ -313,6 +314,7 @@ func traverseState(ctx *cli.Context) error {
 		root common.Hash
 		err  error
 	)
+	//获取根节点信息
 	if ctx.NArg() == 1 {
 		root, err = parseRoot(ctx.Args()[0])
 		if err != nil {
@@ -321,11 +323,12 @@ func traverseState(ctx *cli.Context) error {
 		}
 		log.Info("Start traversing the state", "root", root)
 	} else {
+		//获取区块头的ROOT哈希数据
 		root = headBlock.Root()
 		log.Info("Start traversing the state", "root", root, "number", headBlock.NumberU64())
 	}
 	triedb := trie.NewDatabase(chaindb)
-	t, err := trie.NewSecure(root, triedb)
+	t, err := trie.NewSecure(root, triedb) //创建通过keccak256访问key
 	if err != nil {
 		log.Error("Failed to open trie", "root", root, "err", err)
 		return err
@@ -337,6 +340,7 @@ func traverseState(ctx *cli.Context) error {
 		lastReport time.Time
 		start      = time.Now()
 	)
+	//迭代字典树
 	accIter := trie.NewIterator(t.NodeIterator(nil))
 	for accIter.Next() {
 		accounts += 1

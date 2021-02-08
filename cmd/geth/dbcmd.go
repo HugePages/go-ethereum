@@ -648,6 +648,7 @@ func showMetaData(ctx *cli.Context) error {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error accessing ancients: %v", err)
 	}
+	//格式化输出处理
 	pp := func(val *uint64) string {
 		if val == nil {
 			return "<nil>"
@@ -698,7 +699,7 @@ func freezerMigrate(ctx *cli.Context) error {
 	defer db.Close()
 
 	// Check first block for legacy receipt format
-	numAncients, err := db.Ancients()
+	numAncients, err := db.Ancients() //获取"冷数据"的总体数量
 	if err != nil {
 		return err
 	}
@@ -707,18 +708,18 @@ func freezerMigrate(ctx *cli.Context) error {
 		return nil
 	}
 
-	isFirstLegacy, firstIdx, err := dbHasLegacyReceipts(db, 0)
+	isFirstLegacy, firstIdx, err := dbHasLegacyReceipts(db, 0) //确定满足条件的第一个区块的索引
 	if err != nil {
 		return err
 	}
 	if !isFirstLegacy {
-		log.Info("No legacy receipts to migrate")
+		log.Info("No legacy receipts to migrate") //如果找不到符合条件的区块，则返回
 		return nil
 	}
 
 	log.Info("Starting migration", "ancients", numAncients, "firstLegacy", firstIdx)
 	start := time.Now()
-	if err := db.MigrateTable("receipts", types.ConvertLegacyStoredReceipts); err != nil {
+	if err := db.MigrateTable("receipts", types.ConvertLegacyStoredReceipts); err != nil { //迁移 "冷数据" 到 receipts 表中
 		return err
 	}
 	if err := db.Close(); err != nil {
