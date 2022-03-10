@@ -1,0 +1,37 @@
+目录(文件)按字母排序
+
+├── accounts		以太坊的钱包、地址、账号系统,不同于 Bitcoin 的 UTXO 模式
+├── build			编译、构建相关的脚本和代码
+├── cmd				提供了很多命令行工具,主要用于终端交互,如: geth 启动命令、evm工具、faucet工具等等
+├── common			公用工具,如:debug、数学相关、bit工具等
+├── consensus	 	共识机制,实现不同的以太坊共识机制引擎
+├── console			Console是Javascript语言的解释运行时
+├── contracts		是一个运行在链上的轻节点检查点预言机合约
+├── core			系统核心的数据结构和基础模块,如 虚拟机 、状态模块、批量数据的布隆过滤器 、RawDB、汇编模块
+├── crypto			密码学相关加密及签名算法实现, 如 `secp256k1\ECDSA`
+├── docs			安全审计报告和分裂事后总结
+├── eth				以太坊协议的核心模块,包含了节点发现、全节点数据下载、eth配置、数据获取(base header、交易、区块)、协议(广播、点对点等)、gas模块
+├── ethclient		包装了以太坊网络相关操作的RPC API
+├── ethdb			以太坊堆数据库的操作代码,包含了levelDB和内存数据库
+├── ethstats		提供网络状态报告
+├── event			网络实时事件订阅相关
+├── graphql			提供GraphQL的相关操作
+├── interfaces.go   定义了与以太坊网络交互的接口定义
+├── internal		项目内部使用工具代码,如构建、debug、调用服务API、测试指南、测试日志、web3js扩展等
+├── les				轻量级的以太坊协议(服务端)实现
+├── light			轻量级以太坊协议客户端
+├── log				系统日志模块,log15提供了golang版本下,对人机都可读的日志组件.
+├── metrics			提供系统运行指标,如CPU、内存、磁盘等并提供时序数据库influxdb和prometheus相关操作
+├── miner			提供以太坊的区块创建和挖矿
+├── mobile			供移动端使用的一些包装类
+├── node			以太坊中多种类型节点
+├── p2p				点对点网络协议相关实现
+├── params			系统使用的常量值参数
+├── rlp				以太坊序列化-递归线性前缀(Recursive Linear Prefix)模块
+├── rpc				以太坊RPC服务	
+├── signer			签名校验服务?	(未找到相关介绍资料)
+├── swarm			类IPFS的去中心化存储,现在是一个独立的区块链基础服务
+├── tests			提供单元测试
+└── trie			改进的默克尔+前缀树 MPT(Merkle Patricia Tries)
+
+
