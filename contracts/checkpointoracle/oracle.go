@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package checkpointoracle is a an on-chain light client checkpoint oracle.
+// Package checkpointoracle is an on-chain light client checkpoint oracle.
 package checkpointoracle
 
 //go:generate abigen --sol contract/oracle.sol --pkg contract --out contract/oracle.go
