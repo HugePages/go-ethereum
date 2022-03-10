@@ -45,7 +45,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth"
-	"github.com/ethereum/go-ethereum/eth/catalyst"
+	ethcatalyst "github.com/ethereum/go-ethereum/eth/catalyst"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/eth/gasprice"
@@ -56,6 +56,7 @@ import (
 	"github.com/ethereum/go-ethereum/internal/ethapi"
 	"github.com/ethereum/go-ethereum/internal/flags"
 	"github.com/ethereum/go-ethereum/les"
+	lescatalyst "github.com/ethereum/go-ethereum/les/catalyst"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/metrics/exp"
@@ -432,6 +433,10 @@ var (
 		Name:  "cache.preimages",
 		Usage: "Enable recording the SHA3/keccak preimages of trie keys",
 	}
+	FDLimitFlag = cli.IntFlag{
+		Name:  "fdlimit",
+		Usage: "Raise the open file descriptor resource limit (default = system fd limit)",
+	}
 	// Miner settings
 	MiningEnabledFlag = cli.BoolFlag{
 		Name:  "mine",
@@ -516,6 +521,21 @@ var (
 		Name:  "rpc.txfeecap",
 		Usage: "Sets a cap on transaction fee (in ether) that can be sent via the RPC APIs (0 = no cap)",
 		Value: ethconfig.Defaults.RPCTxFeeCap,
+	}
+	// Authenticated RPC HTTP settings
+	AuthHostFlag = cli.StringFlag{
+		Name:  "authrpc.host",
+		Usage: "Listening address for authenticated APIs",
+		Value: node.DefaultConfig.AuthHost,
+	}
+	AuthPortFlag = cli.IntFlag{
+		Name:  "authrpc.port",
+		Usage: "Listening port for authenticated APIs",
+		Value: node.DefaultConfig.AuthPort,
+	}
+	JWTSecretFlag = cli.StringFlag{
+		Name:  "authrpc.jwtsecret",
+		Usage: "JWT secret (or path to a jwt secret) to use for authenticated RPC endpoints",
 	}
 	// Logging and debug settings
 	EthStatsURLFlag = cli.StringFlag{
@@ -789,11 +809,6 @@ var (
 		Usage: "InfluxDB organization name (v2 only)",
 		Value: metrics.DefaultConfig.InfluxDBOrganization,
 	}
-
-	CatalystFlag = cli.BoolFlag{
-		Name:  "catalyst",
-		Usage: "Catalyst mode (eth2 integration testing)",
-	}
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
@@ -955,6 +970,13 @@ func setHTTP(ctx *cli.Context, cfg *node.Config) {
 		cfg.HTTPPort = ctx.GlobalInt(HTTPPortFlag.Name)
 	}
 
+	if ctx.GlobalIsSet(AuthHostFlag.Name) {
+		cfg.AuthHost = ctx.GlobalString(AuthHostFlag.Name)
+	}
+	if ctx.GlobalIsSet(AuthPortFlag.Name) {
+		cfg.AuthPort = ctx.GlobalInt(AuthPortFlag.Name)
+	}
+
 	if ctx.GlobalIsSet(HTTPCORSDomainFlag.Name) {
 		cfg.HTTPCors = SplitAndTrim(ctx.GlobalString(HTTPCORSDomainFlag.Name))
 	}
@@ -1061,10 +1083,23 @@ func setLes(ctx *cli.Context, cfg *ethconfig.Config) {
 
 // MakeDatabaseHandles raises out the number of allowed file handles per process
 // for Geth and returns half of the allowance to assign to the database.
-func MakeDatabaseHandles() int {
+func MakeDatabaseHandles(max int) int {
 	limit, err := fdlimit.Maximum()
 	if err != nil {
 		Fatalf("Failed to retrieve file descriptor allowance: %v", err)
+	}
+	switch {
+	case max == 0:
+		// User didn't specify a meaningful value, use system limits
+	case max < 128:
+		// User specified something unhealthy, just use system defaults
+		log.Error("File descriptor limit invalid (<128)", "had", max, "updated", limit)
+	case max > limit:
+		// User requested more than the OS allows, notify that we can't allocate it
+		log.Warn("Requested file descriptors denied by OS", "req", max, "limit", limit)
+	default:
+		// User limit is meaningful and within allowed range, use that
+		limit = max
 	}
 	raised, err := fdlimit.Raise(uint64(limit))
 	if err != nil {
@@ -1221,6 +1256,10 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	setNodeUserIdent(ctx, cfg)
 	setDataDir(ctx, cfg)
 	setSmartCard(ctx, cfg)
+
+	if ctx.GlobalIsSet(JWTSecretFlag.Name) {
+		cfg.JWTSecret = ctx.GlobalString(JWTSecretFlag.Name)
+	}
 
 	if ctx.GlobalIsSet(ExternalSignerFlag.Name) {
 		cfg.ExternalSigner = ctx.GlobalString(ExternalSignerFlag.Name)
@@ -1526,7 +1565,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 	if ctx.GlobalIsSet(CacheFlag.Name) || ctx.GlobalIsSet(CacheDatabaseFlag.Name) {
 		cfg.DatabaseCache = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheDatabaseFlag.Name) / 100
 	}
-	cfg.DatabaseHandles = MakeDatabaseHandles()
+	cfg.DatabaseHandles = MakeDatabaseHandles(ctx.GlobalInt(FDLimitFlag.Name))
 	if ctx.GlobalIsSet(AncientFlag.Name) {
 		cfg.DatabaseFreezer = ctx.GlobalString(AncientFlag.Name)
 	}
@@ -1673,9 +1712,15 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 		// Create a new developer genesis block or reuse existing one
 		cfg.Genesis = core.DeveloperGenesisBlock(uint64(ctx.GlobalInt(DeveloperPeriodFlag.Name)), ctx.GlobalUint64(DeveloperGasLimitFlag.Name), developer.Address)
 		if ctx.GlobalIsSet(DataDirFlag.Name) {
+			// If datadir doesn't exist we need to open db in write-mode
+			// so leveldb can create files.
+			readonly := true
+			if !common.FileExist(stack.ResolvePath("chaindata")) {
+				readonly = false
+			}
 			// Check if we have an already initialized chain and fall back to
 			// that if so. Otherwise we need to generate a new genesis spec.
-			chaindb := MakeChainDatabase(ctx, stack, false) // TODO (MariusVanDerWijden) make this read only
+			chaindb := MakeChainDatabase(ctx, stack, readonly)
 			if rawdb.ReadCanonicalHash(chaindb, 0) != (common.Hash{}) {
 				cfg.Genesis = nil // fallback to db content
 			}
@@ -1710,15 +1755,15 @@ func SetDNSDiscoveryDefaults(cfg *ethconfig.Config, genesis common.Hash) {
 // RegisterEthService adds an Ethereum client to the stack.
 // The second return value is the full node instance, which may be nil if the
 // node is running as a light client.
-func RegisterEthService(stack *node.Node, cfg *ethconfig.Config, isCatalyst bool) (ethapi.Backend, *eth.Ethereum) {
+func RegisterEthService(stack *node.Node, cfg *ethconfig.Config) (ethapi.Backend, *eth.Ethereum) {
 	if cfg.SyncMode == downloader.LightSync {
 		backend, err := les.New(stack, cfg)
 		if err != nil {
 			Fatalf("Failed to register the Ethereum service: %v", err)
 		}
 		stack.RegisterAPIs(tracers.APIs(backend.ApiBackend))
-		if isCatalyst {
-			if err := catalyst.RegisterLight(stack, backend); err != nil {
+		if backend.BlockChain().Config().TerminalTotalDifficulty != nil {
+			if err := lescatalyst.Register(stack, backend); err != nil {
 				Fatalf("Failed to register the catalyst service: %v", err)
 			}
 		}
@@ -1734,8 +1779,8 @@ func RegisterEthService(stack *node.Node, cfg *ethconfig.Config, isCatalyst bool
 			Fatalf("Failed to create the LES server: %v", err)
 		}
 	}
-	if isCatalyst {
-		if err := catalyst.Register(stack, backend); err != nil {
+	if backend.BlockChain().Config().TerminalTotalDifficulty != nil {
+		if err := ethcatalyst.Register(stack, backend); err != nil {
 			Fatalf("Failed to register the catalyst service: %v", err)
 		}
 	}
@@ -1838,7 +1883,7 @@ func SplitTagsFlag(tagsFlag string) map[string]string {
 func MakeChainDatabase(ctx *cli.Context, stack *node.Node, readonly bool) ethdb.Database {
 	var (
 		cache   = ctx.GlobalInt(CacheFlag.Name) * ctx.GlobalInt(CacheDatabaseFlag.Name) / 100
-		handles = MakeDatabaseHandles()
+		handles = MakeDatabaseHandles(ctx.GlobalInt(FDLimitFlag.Name))
 
 		err     error
 		chainDb ethdb.Database
