@@ -164,22 +164,22 @@ type Body struct {
 
 // Block represents an entire block in the Ethereum blockchain.
 type Block struct {
-	header       *Header
-	uncles       []*Header
-	transactions Transactions
+	header       *Header      //区块头信息
+	uncles       []*Header    //叔块信息
+	transactions Transactions //当前区块的所有交易
 
 	// caches
-	hash atomic.Value
-	size atomic.Value
+	hash atomic.Value //区块的哈希值
+	size atomic.Value //区块的大小
 
 	// Td is used by package core to store the total difficulty
 	// of the chain up to and including the block.
-	td *big.Int
+	td *big.Int //总难度
 
 	// These fields are used by package eth to track
 	// inter-peer block relay.
-	ReceivedAt   time.Time
-	ReceivedFrom interface{}
+	ReceivedAt   time.Time   //区块接收时间
+	ReceivedFrom interface{} //区块接收来源
 }
 
 // "external" block encoding. used for eth protocol, etc.
