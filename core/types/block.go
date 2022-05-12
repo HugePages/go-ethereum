@@ -68,24 +68,24 @@ func (n *BlockNonce) UnmarshalText(input []byte) error {
 
 // Header represents a block header in the Ethereum blockchain.
 type Header struct {
-	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
-	UncleHash   common.Hash    `json:"sha3Uncles"       gencodec:"required"`
-	Coinbase    common.Address `json:"miner"`
-	Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
-	TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
-	ReceiptHash common.Hash    `json:"receiptsRoot"     gencodec:"required"`
-	Bloom       Bloom          `json:"logsBloom"        gencodec:"required"`
-	Difficulty  *big.Int       `json:"difficulty"       gencodec:"required"`
-	Number      *big.Int       `json:"number"           gencodec:"required"`
-	GasLimit    uint64         `json:"gasLimit"         gencodec:"required"`
-	GasUsed     uint64         `json:"gasUsed"          gencodec:"required"`
-	Time        uint64         `json:"timestamp"        gencodec:"required"`
-	Extra       []byte         `json:"extraData"        gencodec:"required"`
-	MixDigest   common.Hash    `json:"mixHash"`
-	Nonce       BlockNonce     `json:"nonce"`
+	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"` //上一个区块的哈希值
+	UncleHash   common.Hash    `json:"sha3Uncles"       gencodec:"required"` //叔块哈希值
+	Coinbase    common.Address `json:"miner"            gencodec:"required"` //矿工地址（挖出这个块的矿工地址）
+	Root        common.Hash    `json:"stateRoot"        gencodec:"required"` //区块的根节点哈希值，全局状态MPT树的根哈希值 （状态树）
+	TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"` //交易的根节点哈希值 （交易树）
+	ReceiptHash common.Hash    `json:"receiptsRoot"     gencodec:"required"` //收据记录的根节点哈希值 （收据树）
+	Bloom       Bloom          `json:"logsBloom"        gencodec:"required"` //布隆过滤，日志定位查询使用 256 bytes = 2048 bits
+	Difficulty  *big.Int       `json:"difficulty"       gencodec:"required"` //难度值
+	Number      *big.Int       `json:"number"           gencodec:"required"` //区块编号
+	GasLimit    uint64         `json:"gasLimit"         gencodec:"required"` //区块gas限制
+	GasUsed     uint64         `json:"gasUsed"          gencodec:"required"` //gas消耗量
+	Time        uint64         `json:"timestamp"        gencodec:"required"` //出块时间戳-链上时间
+	Extra       []byte         `json:"extraData"        gencodec:"required"` //扩展数据
+	MixDigest   common.Hash    `json:"mixHash"`                              //pow获取出块权限，提供给别的矿工进行校验的数据摘要哈希值
+	Nonce       BlockNonce     `json:"nonce"`                                //随机数-POW使用
 
 	// BaseFee was added by EIP-1559 and is ignored in legacy headers.
-	BaseFee *big.Int `json:"baseFeePerGas" rlp:"optional"`
+	BaseFee *big.Int `json:"baseFeePerGas" rlp:"optional"` //EIP-1559中的基础gas费
 
 	/*
 		TODO (MariusVanDerWijden) Add this field once needed
@@ -158,8 +158,8 @@ func (h *Header) EmptyReceipts() bool {
 // Body is a simple (mutable, non-safe) data container for storing and moving
 // a block's data contents (transactions and uncles) together.
 type Body struct {
-	Transactions []*Transaction
-	Uncles       []*Header
+	Transactions []*Transaction //交易列表
+	Uncles       []*Header      //叔块列表
 }
 
 // Block represents an entire block in the Ethereum blockchain.
