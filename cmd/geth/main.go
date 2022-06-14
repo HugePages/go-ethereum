@@ -203,8 +203,9 @@ var (
 )
 
 func init() {
+	// 初始化操作，并执行geth方法，启动go-ethereum
 	// Initialize the CLI app and start Geth
-	app.Action = geth
+	app.Action = geth      //指定启动的入口函数，geth
 	app.HideVersion = true // we have a command to print the version
 	app.Copyright = "Copyright 2013-2022 The go-ethereum Authors"
 	app.Commands = []cli.Command{
@@ -317,6 +318,7 @@ func prepare(ctx *cli.Context) {
 	go metrics.CollectProcessMetrics(3 * time.Second)
 }
 
+// +++ 程序启动的核心入口
 // geth is the main entry point into the system if no special subcommand is ran.
 // It creates a default node based on the command line arguments and runs it in
 // blocking mode, waiting for it to be shut down.
@@ -324,11 +326,12 @@ func geth(ctx *cli.Context) error {
 	if args := ctx.Args(); len(args) > 0 {
 		return fmt.Errorf("invalid command: %q", args[0])
 	}
-
+	//预处理，处理网络类型，准备内存缓存，启动度量系统
 	prepare(ctx)
+	//创建全节点信息
 	stack, backend := makeFullNode(ctx)
 	defer stack.Close()
-
+	//启动节点
 	startNode(ctx, stack, backend, false)
 	stack.Wait()
 	return nil

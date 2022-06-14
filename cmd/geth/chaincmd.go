@@ -174,22 +174,22 @@ This command dumps out the state for a given block (or latest, if none provided)
 // the zero'd block (i.e. genesis) or will fail hard if it can't succeed.
 func initGenesis(ctx *cli.Context) error {
 	// Make sure we have a valid genesis JSON
-	genesisPath := ctx.Args().First()
+	genesisPath := ctx.Args().First() //获取传入的参数-json文件路径
 	if len(genesisPath) == 0 {
 		utils.Fatalf("Must supply path to genesis JSON file")
 	}
-	file, err := os.Open(genesisPath)
+	file, err := os.Open(genesisPath) //打开文件
 	if err != nil {
 		utils.Fatalf("Failed to read genesis file: %v", err)
 	}
-	defer file.Close()
+	defer file.Close() //最终结束关闭文件流
 
-	genesis := new(core.Genesis)
-	if err := json.NewDecoder(file).Decode(genesis); err != nil {
+	genesis := new(core.Genesis)                                  //创建 genesis 配置对象
+	if err := json.NewDecoder(file).Decode(genesis); err != nil { //解析文件，并将结果存储到 genesis 配置对象中
 		utils.Fatalf("invalid genesis file: %v", err)
 	}
 	// Open and initialise both full and light databases
-	stack, _ := makeConfigNode(ctx)
+	stack, _ := makeConfigNode(ctx) //创建配置节点
 	defer stack.Close()
 	for _, name := range []string{"chaindata", "lightchaindata"} {
 		chaindb, err := stack.OpenDatabaseWithFreezer(name, 0, 0, ctx.GlobalString(utils.AncientFlag.Name), "", false)

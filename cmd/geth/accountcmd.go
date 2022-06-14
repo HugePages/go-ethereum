@@ -191,6 +191,7 @@ nodes.
 	}
 )
 
+//获取账号列表（本地创建的或者导入的）
 func accountList(ctx *cli.Context) error {
 	stack, _ := makeConfigNode(ctx)
 	var index int
@@ -268,7 +269,7 @@ func accountCreate(ctx *cli.Context) error {
 		}
 	}
 	utils.SetNodeConfig(ctx, &cfg.Node)
-	keydir, err := cfg.Node.KeyDirConfig()
+	keydir, err := cfg.Node.KeyDirConfig() //获取keystore相关配置
 	if err != nil {
 		utils.Fatalf("Failed to read configuration: %v", err)
 	}
@@ -281,7 +282,7 @@ func accountCreate(ctx *cli.Context) error {
 
 	password := utils.GetPassPhraseWithList("Your new account is locked with a password. Please give a password. Do not forget this password.", true, 0, utils.MakePasswordList(ctx))
 
-	account, err := keystore.StoreKey(keydir, password, scryptN, scryptP)
+	account, err := keystore.StoreKey(keydir, password, scryptN, scryptP) //生成账号信息，使用ecdsa进行随机生成，sha256加密
 
 	if err != nil {
 		utils.Fatalf("Failed to create account: %v", err)

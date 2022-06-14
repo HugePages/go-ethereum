@@ -1,0 +1,25 @@
+COMMANDS:
+   account                            Manage accounts                                                                               账号管理
+   attach                             Start an interactive JavaScript environment (connect to node)                                 开启js的交互环境（链接到节点上）
+   console                            Start an interactive JavaScript environment                                                   开启js的交互环境
+   db                                 Low level database operations                                                                 底层数据库操作命令（有相应的数据库子命令）
+   dump                               Dump a specific block from storage                                                            导出特定区块数据
+   dumpconfig                         Show configuration values                                                                     导出数据的配置命令
+   dumpgenesis                        Dumps genesis block JSON configuration to stdout                                              导出创世块的数据，可以指向到文件系统
+   export                             Export blockchain into file                                                                   导出区块链信息文件
+   export-preimages                   Export the preimage database into an RLP stream                                               以递归长度前缀序列化方式导出 preimage 数据库
+   import                             Import a blockchain file                                                                      导入一个区块链文件
+   import-preimages                   Import the preimage database from an RLP stream                                               以递归长度前缀序列化文件进行 preimage 数据库导入
+   init                               Bootstrap and initialize a new genesis block                                                  启动并初始化创世块
+   js                                 Execute the specified JavaScript files                                                        执行特定的js文件
+   license                            Display license information                                                                   现实许可证信息
+   makecache                          Generate ethash verification cache (for testing)                                              生成 ethash 验证缓存（测试使用）
+   makedag                            Generate ethash mining DAG (for testing)                                                      生成 ethash 用于挖矿的有向环形图数据集（测试使用）
+   removedb                           Remove blockchain and state databases                                                         删除区块链和状态数据库
+   show-deprecated-flags              Show flags that have been deprecated                                                          现实未来会被移除的参数
+   snapshot                           A set of commands based on the snapshot                                                       快照处理
+   version                            Print version numbers                                                                         打印当前版本信息
+   version-check                      Checks (online) whether the current version suffers from any known security vulnerabilities   通过网络执行版本漏洞检测
+   wallet                             Manage Ethereum presale wallets                                                               管理钱包
+   help, h                            Shows a list of commands or help for one command                                              查看帮助信息
+
