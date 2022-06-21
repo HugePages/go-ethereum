@@ -219,23 +219,24 @@ func dumpGenesis(ctx *cli.Context) error {
 }
 
 func importChain(ctx *cli.Context) error {
-	if len(ctx.Args()) < 1 {
+	if len(ctx.Args()) < 1 { //判断参数是否正确
 		utils.Fatalf("This command requires an argument.")
 	}
 	// Start metrics export if enabled
-	utils.SetupMetrics(ctx)
+	utils.SetupMetrics(ctx) //设置度量功能
 	// Start system runtime metrics collection
-	go metrics.CollectProcessMetrics(3 * time.Second)
+	go metrics.CollectProcessMetrics(3 * time.Second) //开启协程，进行度量数据收集
 
-	stack, _ := makeConfigNode(ctx)
-	defer stack.Close()
+	stack, _ := makeConfigNode(ctx) //创建node对象
+	defer stack.Close()             //结束关闭stack
 
-	chain, db := utils.MakeChain(ctx, stack)
+	chain, db := utils.MakeChain(ctx, stack) //创建chain对象
 	defer db.Close()
 
 	// Start periodically gathering memory profiles
 	var peakMemAlloc, peakMemSys uint64
 	go func() {
+		//协程处理度量统计
 		stats := new(runtime.MemStats)
 		for {
 			runtime.ReadMemStats(stats)
@@ -249,11 +250,12 @@ func importChain(ctx *cli.Context) error {
 		}
 	}()
 	// Import the chain
-	start := time.Now()
+	start := time.Now() //记录导入时间
 
 	var importErr error
 
 	if len(ctx.Args()) == 1 {
+		//导入chain
 		if err := utils.ImportChain(chain, ctx.Args().First()); err != nil {
 			importErr = err
 			log.Error("Import error", "err", err)
@@ -302,16 +304,16 @@ func exportChain(ctx *cli.Context) error {
 		utils.Fatalf("This command requires an argument.")
 	}
 
-	stack, _ := makeConfigNode(ctx)
+	stack, _ := makeConfigNode(ctx) //创建节点
 	defer stack.Close()
 
-	chain, _ := utils.MakeChain(ctx, stack)
+	chain, _ := utils.MakeChain(ctx, stack) //创建链
 	start := time.Now()
 
 	var err error
 	fp := ctx.Args().First()
 	if len(ctx.Args()) < 3 {
-		err = utils.ExportChain(chain, fp)
+		err = utils.ExportChain(chain, fp) //导出区块链到指定文件（使用gzip压缩）
 	} else {
 		// This can be improved to allow for numbers larger than 9223372036854775807
 		first, ferr := strconv.ParseInt(ctx.Args().Get(1), 10, 64)
@@ -325,7 +327,7 @@ func exportChain(ctx *cli.Context) error {
 		if head := chain.CurrentFastBlock(); uint64(last) > head.NumberU64() {
 			utils.Fatalf("Export error: block number %d larger than head block %d\n", uint64(last), head.NumberU64())
 		}
-		err = utils.ExportAppendChain(chain, fp, uint64(first), uint64(last))
+		err = utils.ExportAppendChain(chain, fp, uint64(first), uint64(last)) //导出区块链到文件（使用append模式）
 	}
 
 	if err != nil {
