@@ -262,60 +262,60 @@ func (ethash *Ethash) VerifyUncles(chain consensus.ChainReader, block *types.Blo
 // See YP section 4.3.4. "Block Header Validity"
 func (ethash *Ethash) verifyHeader(chain consensus.ChainHeaderReader, header, parent *types.Header, uncle bool, seal bool, unixNow int64) error {
 	// Ensure that the header's extra-data section is of a reasonable size
-	if uint64(len(header.Extra)) > params.MaximumExtraDataSize {
+	if uint64(len(header.Extra)) > params.MaximumExtraDataSize { // 判断拓展数据长度 （32字节）// Maximum size extra data may be after Genesis.
 		return fmt.Errorf("extra-data too long: %d > %d", len(header.Extra), params.MaximumExtraDataSize)
 	}
 	// Verify the header's timestamp
-	if !uncle {
+	if !uncle { //非叔块，进行时间戳的范围校验
 		if header.Time > uint64(unixNow+allowedFutureBlockTimeSeconds) {
 			return consensus.ErrFutureBlock
 		}
 	}
-	if header.Time <= parent.Time {
+	if header.Time <= parent.Time { //新出块不能小于父块出块时间
 		return errOlderBlockTime
 	}
 	// Verify the block's difficulty based on its timestamp and parent's difficulty
-	expected := ethash.CalcDifficulty(chain, header.Time, parent)
+	expected := ethash.CalcDifficulty(chain, header.Time, parent) //计算出块难度，基于父区块难度和时间戳
 
 	if expected.Cmp(header.Difficulty) != 0 {
 		return fmt.Errorf("invalid difficulty: have %v, want %v", header.Difficulty, expected)
 	}
 	// Verify that the gas limit is <= 2^63-1
-	if header.GasLimit > params.MaxGasLimit {
+	if header.GasLimit > params.MaxGasLimit { //验证 gasLimit
 		return fmt.Errorf("invalid gasLimit: have %v, max %v", header.GasLimit, params.MaxGasLimit)
 	}
 	// Verify that the gasUsed is <= gasLimit
-	if header.GasUsed > header.GasLimit {
+	if header.GasUsed > header.GasLimit { //判断使用Gas数量和Limit的数值
 		return fmt.Errorf("invalid gasUsed: have %d, gasLimit %d", header.GasUsed, header.GasLimit)
 	}
 	// Verify the block's gas usage and (if applicable) verify the base fee.
-	if !chain.Config().IsLondon(header.Number) {
+	if !chain.Config().IsLondon(header.Number) { //判断是不是伦敦分叉阶段（EIP-1559）
 		// Verify BaseFee not present before EIP-1559 fork.
-		if header.BaseFee != nil {
+		if header.BaseFee != nil { //BaseFee 不能为空
 			return fmt.Errorf("invalid baseFee before fork: have %d, expected 'nil'", header.BaseFee)
 		}
-		if err := misc.VerifyGaslimit(parent.GasLimit, header.GasLimit); err != nil {
+		if err := misc.VerifyGaslimit(parent.GasLimit, header.GasLimit); err != nil { //校验 GasLimit
 			return err
 		}
-	} else if err := misc.VerifyEip1559Header(chain.Config(), parent, header); err != nil {
+	} else if err := misc.VerifyEip1559Header(chain.Config(), parent, header); err != nil { // 判断 1559 头信息，包含 BaseFee 和 GasLimit
 		// Verify the header's EIP-1559 attributes.
 		return err
 	}
 	// Verify that the block number is parent's +1
-	if diff := new(big.Int).Sub(header.Number, parent.Number); diff.Cmp(big.NewInt(1)) != 0 {
+	if diff := new(big.Int).Sub(header.Number, parent.Number); diff.Cmp(big.NewInt(1)) != 0 { //区块数（高度）= 父区块数+1
 		return consensus.ErrInvalidNumber
 	}
 	// Verify the engine specific seal securing the block
-	if seal {
+	if seal { //根据设置模式，判断出块数据合法性。
 		if err := ethash.verifySeal(chain, header, false); err != nil {
 			return err
 		}
 	}
 	// If all checks passed, validate any special fields for hard forks
-	if err := misc.VerifyDAOHeaderExtraData(chain.Config(), header); err != nil {
+	if err := misc.VerifyDAOHeaderExtraData(chain.Config(), header); err != nil { //校验 The DAO 事件的扩展信息
 		return err
 	}
-	if err := misc.VerifyForkHashes(chain.Config(), header, uncle); err != nil {
+	if err := misc.VerifyForkHashes(chain.Config(), header, uncle); err != nil { //校验分叉 hash 信息
 		return err
 	}
 	return nil

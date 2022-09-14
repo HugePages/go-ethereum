@@ -137,10 +137,10 @@ func Bloom9(data []byte) []byte {
 
 // bloomValues returns the bytes (index-value pairs) to set for the given data
 func bloomValues(data []byte, hashbuf []byte) (uint, byte, uint, byte, uint, byte) {
-	sha := hasherPool.Get().(crypto.KeccakState)
+	sha := hasherPool.Get().(crypto.KeccakState) // 创建线程安全的 hasherPool，可以快速获取 sha 实例。
 	sha.Reset()
 	sha.Write(data)
-	sha.Read(hashbuf)
+	sha.Read(hashbuf) //随机读取数据 Read to get a variable amount of data from the hash state. Read is faster than Sum
 	hasherPool.Put(sha)
 	// The actual bits to flip
 	v1 := byte(1 << (hashbuf[1] & 0x7))

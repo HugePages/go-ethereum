@@ -60,8 +60,8 @@ func TestBloomExtensively(t *testing.T) {
 	var b Bloom
 	// Add 100 "random" things
 	for i := 0; i < 100; i++ {
-		data := fmt.Sprintf("xxxxxxxxxx data %d yyyyyyyyyyyyyy", i)
-		b.Add([]byte(data))
+		data := fmt.Sprintf("xxxxxxxxxx data %d yyyyyyyyyyyyyy", i) //100次数据拼接
+		b.Add([]byte(data))                                         //执行添加操作
 		//b.Add(new(big.Int).SetBytes([]byte(data)))
 	}
 	got := crypto.Keccak256Hash(b.Bytes())
