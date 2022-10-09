@@ -478,7 +478,7 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 	// be stored due to not enough gas set an error and let it be handled
 	// by the error checking condition below.
 	if err == nil {
-		//计算创建合约消耗的 gas
+		//计算创建合约消耗的 gas ,字节长度*常量
 		createDataGas := uint64(len(ret)) * params.CreateDataGas
 		if contract.UseGas(createDataGas) { //判断 gas 可用，并"消耗" gas
 			evm.StateDB.SetCode(address, ret)
