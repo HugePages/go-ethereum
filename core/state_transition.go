@@ -115,16 +115,17 @@ func (result *ExecutionResult) Revert() []byte {
 }
 
 // IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
+// 计算固定 gas 消耗
 func IntrinsicGas(data []byte, accessList types.AccessList, isContractCreation bool, isHomestead, isEIP2028 bool) (uint64, error) {
 	// Set the starting gas for the raw transaction
 	var gas uint64
 	if isContractCreation && isHomestead {
-		gas = params.TxGasContractCreation
+		gas = params.TxGasContractCreation //创建合约 53000
 	} else {
-		gas = params.TxGas
+		gas = params.TxGas //执行合约 21000
 	}
 	// Bump the required gas by the amount of transactional data
-	if len(data) > 0 {
+	if len(data) > 0 { //判断数据大小
 		// Zero and non-zero bytes are priced differently
 		var nz uint64
 		for _, byt := range data {
@@ -133,11 +134,11 @@ func IntrinsicGas(data []byte, accessList types.AccessList, isContractCreation b
 			}
 		}
 		// Make sure we don't exceed uint64 for all data combinations
-		nonZeroGas := params.TxDataNonZeroGasFrontier
-		if isEIP2028 {
+		nonZeroGas := params.TxDataNonZeroGasFrontier //默认 64gas/byte
+		if isEIP2028 {                                //EIP-2028 16gas/byte
 			nonZeroGas = params.TxDataNonZeroGasEIP2028
 		}
-		if (math.MaxUint64-gas)/nonZeroGas < nz {
+		if (math.MaxUint64-gas)/nonZeroGas < nz { //判断数据不超过最大gas值
 			return 0, ErrGasUintOverflow
 		}
 		gas += nz * nonZeroGas
@@ -272,7 +273,7 @@ func (st *StateTransition) preCheck() error {
 //
 // However if any consensus issue encountered, return the error directly with
 // nil evm execution result.
-func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
+func (st *StateTransition) TranschritionDb() (*ExecutionResult, error) {
 	// First check this message satisfies all consensus rules before
 	// applying the message. The rules include these clauses
 	//

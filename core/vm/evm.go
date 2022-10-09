@@ -403,42 +403,51 @@ func (c *codeAndHash) Hash() common.Hash {
 }
 
 // create creates a new contract using code as deployment code.
+// 创建合约
+// 参数描述：
+//	合约Ref ，Address信息，创建合约调用者地址
+//	codeaAndHash 合约代码和哈希
+//	gas 创建合约消耗的 gas 数值
+//	value 捐献金额
+//	address 合约地址
+//	OpCode CREATE 0xf0 或者是 Create2 0xf5
 func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64, value *big.Int, address common.Address, typ OpCode) ([]byte, common.Address, uint64, error) {
 	// Depth check execution. Fail if we're trying to execute above the
-	// limit.
+	// limit 1024. 限制调用栈深度为1024
 	if evm.depth > int(params.CallCreateDepth) {
-		return nil, common.Address{}, gas, ErrDepth
+		return nil, common.Address{}, gas, ErrDepth //返回错误信息
 	}
-	if !evm.Context.CanTransfer(evm.StateDB, caller.Address(), value) {
+	if !evm.Context.CanTransfer(evm.StateDB, caller.Address(), value) { //判断是不是可以转账
 		return nil, common.Address{}, gas, ErrInsufficientBalance
 	}
-	nonce := evm.StateDB.GetNonce(caller.Address())
-	if nonce+1 < nonce {
+	nonce := evm.StateDB.GetNonce(caller.Address()) // 获取创建合约者的nonce
+	if nonce+1 < nonce {                            //什么情况下nonce+1 < nonce, 达到int64的最大值，加一溢出
 		return nil, common.Address{}, gas, ErrNonceUintOverflow
 	}
-	evm.StateDB.SetNonce(caller.Address(), nonce+1)
+	evm.StateDB.SetNonce(caller.Address(), nonce+1) //设置地址nonce+1
 	// We add this to the access list _before_ taking a snapshot. Even if the creation fails,
 	// the access-list change should not be rolled back
 	if evm.chainRules.IsBerlin {
 		evm.StateDB.AddAddressToAccessList(address)
 	}
 	// Ensure there's no existing contract already at the designated address
-	contractHash := evm.StateDB.GetCodeHash(address)
+	contractHash := evm.StateDB.GetCodeHash(address) //判断 代码hash 是否已经存在，如果存在nonce不为0并且不是空代码，则返回错误
 	if evm.StateDB.GetNonce(address) != 0 || (contractHash != (common.Hash{}) && contractHash != emptyCodeHash) {
 		return nil, common.Address{}, 0, ErrContractAddressCollision
 	}
 	// Create a new account on the state
 	snapshot := evm.StateDB.Snapshot()
-	evm.StateDB.CreateAccount(address)
+	evm.StateDB.CreateAccount(address) //创建账号
 	if evm.chainRules.IsEIP158 {
 		evm.StateDB.SetNonce(address, 1)
 	}
+	//将初始金额从caller转移给合约账户
 	evm.Context.Transfer(evm.StateDB, caller.Address(), address, value)
 
 	// Initialise a new contract and set the code that is to be used by the EVM.
 	// The contract is a scoped environment for this execution context only.
-	contract := NewContract(caller, AccountRef(address), value, gas)
-	contract.SetCodeOptionalHash(&address, codeAndHash)
+	contract := NewContract(caller, AccountRef(address), value, gas) //创建新合约
+	contract.SetCodeOptionalHash(&address, codeAndHash)              //对合约地址对象进行codeHash赋值
 
 	if evm.Config.Debug {
 		if evm.depth == 0 {
@@ -448,16 +457,18 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 		}
 	}
 
-	start := time.Now()
-
+	start := time.Now() //计算创建合约耗时起始标记
+	//运行合约
 	ret, err := evm.interpreter.Run(contract, nil, false)
 
 	// Check whether the max code size has been exceeded, assign err if the case.
+	//代码长度不超过MaxCodeSize = 24576 // Maximum bytecode to permit for a contract
 	if err == nil && evm.chainRules.IsEIP158 && len(ret) > params.MaxCodeSize {
 		err = ErrMaxCodeSizeExceeded
 	}
 
 	// Reject code starting with 0xEF if EIP-3541 is enabled.
+	// 计算创建合约后返回数据长度以及起始字节数据
 	if err == nil && len(ret) >= 1 && ret[0] == 0xEF && evm.chainRules.IsLondon {
 		err = ErrInvalidCode
 	}
@@ -467,8 +478,9 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 	// be stored due to not enough gas set an error and let it be handled
 	// by the error checking condition below.
 	if err == nil {
+		//计算创建合约消耗的 gas
 		createDataGas := uint64(len(ret)) * params.CreateDataGas
-		if contract.UseGas(createDataGas) {
+		if contract.UseGas(createDataGas) { //判断 gas 可用，并"消耗" gas
 			evm.StateDB.SetCode(address, ret)
 		} else {
 			err = ErrCodeStoreOutOfGas
@@ -478,9 +490,9 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 	// When an error was returned by the EVM or when setting the creation code
 	// above we revert to the snapshot and consume any gas remaining. Additionally
 	// when we're in homestead this also counts for code storage gas errors.
-	if err != nil && (evm.chainRules.IsHomestead || err != ErrCodeStoreOutOfGas) {
+	if err != nil && (evm.chainRules.IsHomestead || err != ErrCodeStoreOutOfGas) { //出现异常情况，回复snapshot数据
 		evm.StateDB.RevertToSnapshot(snapshot)
-		if err != ErrExecutionReverted {
+		if err != ErrExecutionReverted { //恢复正常，消耗用户的gas
 			contract.UseGas(contract.Gas)
 		}
 	}
