@@ -321,7 +321,7 @@ func opReturnDataSize(pc *uint64, interpreter *EVMInterpreter, scope *ScopeConte
 
 func opReturnDataCopy(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	var (
-		memOffset  = scope.Stack.pop()
+		memOffset  = scope.Stack.pop() //数据出栈
 		dataOffset = scope.Stack.pop()
 		length     = scope.Stack.pop()
 	)
@@ -536,8 +536,8 @@ func opJump(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byt
 	if atomic.LoadInt32(&interpreter.evm.abort) != 0 {
 		return nil, errStopToken
 	}
-	pos := scope.Stack.pop()
-	if !scope.Contract.validJumpdest(&pos) {
+	pos := scope.Stack.pop()                 //出栈指令，校验是不是在JumpTable中
+	if !scope.Contract.validJumpdest(&pos) { //根据当前合约环境，获取代码，并验证目标地址是否合法
 		return nil, ErrInvalidJump
 	}
 	*pc = pos.Uint64() - 1 // pc will be increased by the interpreter loop
@@ -548,8 +548,9 @@ func opJumpi(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]by
 	if atomic.LoadInt32(&interpreter.evm.abort) != 0 {
 		return nil, errStopToken
 	}
+	//出栈两个数据 stack[0],stack[1]
 	pos, cond := scope.Stack.pop(), scope.Stack.pop()
-	if !cond.IsZero() {
+	if !cond.IsZero() { //如果stack[1]不为零，则判断pos目标指令是否合法
 		if !scope.Contract.validJumpdest(&pos) {
 			return nil, ErrInvalidJump
 		}
@@ -559,6 +560,7 @@ func opJumpi(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]by
 }
 
 func opJumpdest(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	//跳转到当前指令，并继续向下执行
 	return nil, nil
 }
 
