@@ -132,6 +132,7 @@ func puthead(buf []byte, smalltag, largetag byte, size uint64) int {
 var encoderInterface = reflect.TypeOf(new(Encoder)).Elem()
 
 // makeWriter creates a writer function for the given type.
+// 根据类型 kind 表示go中的数据类型
 func makeWriter(typ reflect.Type, ts rlpstruct.Tags) (writer, error) {
 	kind := typ.Kind()
 	switch {

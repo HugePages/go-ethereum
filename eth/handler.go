@@ -126,6 +126,7 @@ type handler struct {
 }
 
 // newHandler returns a handler for all Ethereum chain management protocol.
+// 链的管理协议：对协议数据的处理
 func newHandler(config *handlerConfig) (*handler, error) {
 	// Create the protocol manager with the base fields
 	if config.EventMux == nil {

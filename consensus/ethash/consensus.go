@@ -196,32 +196,37 @@ func (ethash *Ethash) verifyHeaderWorker(chain consensus.ChainHeaderReader, head
 
 // VerifyUncles verifies that the given block's uncles conform to the consensus
 // rules of the stock Ethereum ethash engine.
+// 校验叔块合法性
 func (ethash *Ethash) VerifyUncles(chain consensus.ChainReader, block *types.Block) error {
 	// If we're running a full engine faking, accept any input as valid
-	if ethash.config.PowMode == ModeFullFake {
+	if ethash.config.PowMode == ModeFullFake { //模拟环境，直接返回空，表示有效
 		return nil
 	}
 	// Verify that there are at most 2 uncles included in this block
+	// 判断当前区块的叔块数量是否大于2
 	if len(block.Uncles()) > maxUncles {
-		return errTooManyUncles
+		return errTooManyUncles // too many uncles
 	}
-	if len(block.Uncles()) == 0 {
+	if len(block.Uncles()) == 0 { //如果叔块数量为零，返回有效，不再进行校验
 		return nil
 	}
 	// Gather the set of past uncles and ancestors
 	uncles, ancestors := mapset.NewSet(), make(map[common.Hash]*types.Header)
 
+	//父区块的编号和父区块 hash 值
 	number, parent := block.NumberU64()-1, block.ParentHash()
-	for i := 0; i < 7; i++ {
-		ancestorHeader := chain.GetHeader(parent, number)
+
+	for i := 0; i < 7; i++ { //循环判断叔块合法性
+		ancestorHeader := chain.GetHeader(parent, number) //根据父辈 Hash 和 Number 获取父辈 header 信息
 		if ancestorHeader == nil {
 			break
 		}
-		ancestors[parent] = ancestorHeader
+		ancestors[parent] = ancestorHeader // map：key是区块 Hash，value 是区块头信息
 		// If the ancestor doesn't have any uncles, we don't have to iterate them
+		// 判断父区块的叔块列表是否为空
 		if ancestorHeader.UncleHash != types.EmptyUncleHash {
 			// Need to add those uncles to the banned list too
-			ancestor := chain.GetBlock(parent, number)
+			ancestor := chain.GetBlock(parent, number) //获取父辈block
 			if ancestor == nil {
 				break
 			}
@@ -232,9 +237,10 @@ func (ethash *Ethash) VerifyUncles(chain consensus.ChainReader, block *types.Blo
 		parent, number = ancestorHeader.ParentHash, number-1
 	}
 	ancestors[block.Hash()] = block.Header()
-	uncles.Add(block.Hash())
+	uncles.Add(block.Hash()) //添加叔块 hash 到一个 set 中
 
 	// Verify each of the uncles that it's recent, but not an ancestor
+	// 遍历每一个叔区块信息,和所有的祖先区块、祖先区块使用的叔块进行比较，判断是否重复。
 	for _, uncle := range block.Uncles() {
 		// Make sure every uncle is rewarded only once
 		hash := uncle.Hash()
@@ -331,6 +337,7 @@ func (ethash *Ethash) CalcDifficulty(chain consensus.ChainHeaderReader, time uin
 // CalcDifficulty is the difficulty adjustment algorithm. It returns
 // the difficulty that a new block should have when created at time
 // given the parent block's time and difficulty.
+// PoW难度计算
 func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Header) *big.Int {
 	next := new(big.Int).Add(parent.Number, big1)
 	switch {
@@ -642,6 +649,7 @@ var (
 // AccumulateRewards credits the coinbase of the given block with the mining
 // reward. The total reward consists of the static block reward and rewards for
 // included uncles. The coinbase of each uncle block is also rewarded.
+// 计算发放奖励总和，同时更新新区块奖励、叔块奖励。
 func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header, uncles []*types.Header) {
 	// Select the correct block reward based on chain progression
 	blockReward := FrontierBlockReward
@@ -654,15 +662,16 @@ func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 	// Accumulate the rewards for the miner and any included uncles
 	reward := new(big.Int).Set(blockReward)
 	r := new(big.Int)
+	//给叔块发放奖励,并计算叔块给出块地址带来的额外奖励总额
 	for _, uncle := range uncles {
-		r.Add(uncle.Number, big8)
-		r.Sub(r, header.Number)
-		r.Mul(r, blockReward)
-		r.Div(r, big8)
-		state.AddBalance(uncle.Coinbase, r)
+		r.Add(uncle.Number, big8)           //uncle的区块number+8 举例 叔区块编号：1463272 ，r=1463272+8
+		r.Sub(r, header.Number)             // 计算uncle和当前区块的隔代数量+8，当前区块编号：1463274，r=1463272+8-1463274
+		r.Mul(r, blockReward)               //计算 r=（1463272+8-1463274）* 3（当前每个区块出块奖励为3）
+		r.Div(r, big8)                      //1463272+8-1463274）* 3/8 = 6*3/8=2.25
+		state.AddBalance(uncle.Coinbase, r) //状态数据库进行叔块coinbase的奖励发放。
 
-		r.Div(blockReward, big32)
-		reward.Add(reward, r)
+		r.Div(blockReward, big32) // 当前区块额外获得叔块奖励 3/32
+		reward.Add(reward, r)     //区块最终获得奖励 3+3/32
 	}
 	state.AddBalance(header.Coinbase, reward)
 }

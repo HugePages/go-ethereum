@@ -40,8 +40,10 @@ type typekey struct {
 	rlpstruct.Tags
 }
 
+// 解析器
 type decoder func(*Stream, reflect.Value) error
 
+// 編碼器
 type writer func(reflect.Value, *encBuffer) error
 
 var theTC = newTypeCache()
@@ -180,8 +182,8 @@ func (e structFieldError) Error() string {
 }
 
 func (i *typeinfo) generate(typ reflect.Type, tags rlpstruct.Tags) {
-	i.decoder, i.decoderErr = makeDecoder(typ, tags)
-	i.writer, i.writerErr = makeWriter(typ, tags)
+	i.decoder, i.decoderErr = makeDecoder(typ, tags) //创建指定类型的解码器
+	i.writer, i.writerErr = makeWriter(typ, tags)    // 创建指定类型的记录器
 }
 
 // rtypeToStructType converts typ to rlpstruct.Type.

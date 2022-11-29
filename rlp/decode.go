@@ -76,7 +76,7 @@ type Decoder interface {
 // Note that Decode does not set an input limit for all readers and may be vulnerable to
 // panics cause by huge value sizes. If you need an input limit, use
 //
-//     NewStream(r, limit).Decode(val)
+//	NewStream(r, limit).Decode(val)
 func Decode(r io.Reader, val interface{}) error {
 	stream := streamPool.Get().(*Stream)
 	defer streamPool.Put(stream)
@@ -150,6 +150,7 @@ var (
 	bigInt           = reflect.TypeOf(big.Int{})
 )
 
+// 创建解码器
 func makeDecoder(typ reflect.Type, tags rlpstruct.Tags) (dec decoder, err error) {
 	kind := typ.Kind()
 	switch {
@@ -768,6 +769,7 @@ func (s *Stream) Bool() (bool, error) {
 // List starts decoding an RLP list. If the input does not contain a
 // list, the returned error will be ErrExpectedList. When the list's
 // end has been reached, any Stream operation will return EOL.
+// 表示该函数属于 Stream类型对象的函数
 func (s *Stream) List() (size uint64, err error) {
 	kind, size, err := s.Kind()
 	if err != nil {
@@ -883,7 +885,7 @@ func (s *Stream) Decode(val interface{}) error {
 		return err
 	}
 
-	err = decoder(s, rval.Elem())
+	err = decoder(s, rval.Elem()) //解码真实数据
 	if decErr, ok := err.(*decodeError); ok && len(decErr.ctx) > 0 {
 		// Add decode target type to error so context has more meaning.
 		decErr.ctx = append(decErr.ctx, fmt.Sprint("(", rtyp.Elem(), ")"))

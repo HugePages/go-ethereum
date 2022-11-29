@@ -868,7 +868,7 @@ func (bc *BlockChain) procFutureBlocks() {
 		})
 		// Insert one by one as chain insertion needs contiguous ancestry between blocks
 		for i := range blocks {
-			bc.InsertChain(blocks[i : i+1])
+			bc.InsertChain(blocks[i : i+1]) //将区块插入到链中
 		}
 	}
 }
@@ -1849,6 +1849,8 @@ func (bc *BlockChain) insertSideChain(block *types.Block, it *insertIterator) (i
 // recoverAncestors finds the closest ancestor with available state and re-execute
 // all the ancestor blocks since that.
 // recoverAncestors is only used post-merge.
+
+//恢复数据
 func (bc *BlockChain) recoverAncestors(block *types.Block) error {
 	// Gather all the sidechain hashes (full blocks may be memory heavy)
 	var (

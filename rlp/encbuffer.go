@@ -274,16 +274,15 @@ func encBufferFromWriter(w io.Writer) *encBuffer {
 // The zero value is NOT ready for use. To get a usable buffer,
 // create it using NewEncoderBuffer or call Reset.
 type EncoderBuffer struct {
-	buf *encBuffer
-	dst io.Writer
-
+	buf       *encBuffer
+	dst       io.Writer
 	ownBuffer bool
 }
 
 // NewEncoderBuffer creates an encoder buffer.
 func NewEncoderBuffer(dst io.Writer) EncoderBuffer {
-	var w EncoderBuffer
-	w.Reset(dst)
+	var w EncoderBuffer //创建一个新的EncoderBuffer
+	w.Reset(dst)        //执行reset方法，清空缓冲区数据
 	return w
 }
 
@@ -307,7 +306,7 @@ func (w *EncoderBuffer) Reset(dst io.Writer) {
 		w.buf = encBufferPool.Get().(*encBuffer)
 		w.ownBuffer = true
 	}
-	w.buf.reset()
+	w.buf.reset() //重置encbuffer
 	w.dst = dst
 }
 

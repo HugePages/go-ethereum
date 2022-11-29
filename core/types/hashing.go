@@ -84,6 +84,7 @@ func encodeForDerive(list DerivableList, i int, buf *bytes.Buffer) []byte {
 }
 
 // DeriveSha creates the tree hashes of transactions and receipts in a block header.
+// 创建root hash
 func DeriveSha(list DerivableList, hasher TrieHasher) common.Hash {
 	hasher.Reset()
 

@@ -1,4 +1,4 @@
-package ztest
+package zytest
 
 import (
 	"encoding/hex"
