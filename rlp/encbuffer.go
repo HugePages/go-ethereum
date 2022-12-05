@@ -281,8 +281,8 @@ type EncoderBuffer struct {
 
 // NewEncoderBuffer creates an encoder buffer.
 func NewEncoderBuffer(dst io.Writer) EncoderBuffer {
-	var w EncoderBuffer //创建一个新的EncoderBuffer
-	w.Reset(dst)        //执行reset方法，清空缓冲区数据
+	var w EncoderBuffer // 创建一个新的EncoderBuffer
+	w.Reset(dst)        // 执行reset方法，清空缓冲区数据
 	return w
 }
 
@@ -306,7 +306,7 @@ func (w *EncoderBuffer) Reset(dst io.Writer) {
 		w.buf = encBufferPool.Get().(*encBuffer)
 		w.ownBuffer = true
 	}
-	w.buf.reset() //重置encbuffer
+	w.buf.reset() // 重置encbuffer
 	w.dst = dst
 }
 
