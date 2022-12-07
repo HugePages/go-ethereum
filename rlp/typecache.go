@@ -182,7 +182,7 @@ func (e structFieldError) Error() string {
 }
 
 func (i *typeinfo) generate(typ reflect.Type, tags rlpstruct.Tags) {
-	i.decoder, i.decoderErr = makeDecoder(typ, tags) //创建指定类型的解码器
+	i.decoder, i.decoderErr = makeDecoder(typ, tags) // 创建指定类型的解码器
 	i.writer, i.writerErr = makeWriter(typ, tags)    // 创建指定类型的记录器
 }
 
